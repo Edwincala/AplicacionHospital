@@ -46,12 +46,4 @@ public class HistoriaClinicaController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/buscarPorDetalles/{detalles}")
-    public ResponseEntity<List<HistoriaClinica>> findHistoriaClinicaByDetalles(@PathVariable String detalles) {
-        List<HistoriaClinica> historias = historiaClinicaService.findHistoriaClinicaByDetalles(detalles);
-        if (historias.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        return new ResponseEntity<>(historias, HttpStatus.OK);
-    }
 }

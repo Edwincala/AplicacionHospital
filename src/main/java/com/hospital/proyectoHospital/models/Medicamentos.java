@@ -1,10 +1,6 @@
 package com.hospital.proyectoHospital.models;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import org.hibernate.annotations.UuidGenerator;
+import jakarta.persistence.*;
 
 import java.util.UUID;
 
@@ -12,7 +8,7 @@ import java.util.UUID;
 @Table(name = "medicamentos")
 public class Medicamentos {
     @Id
-    @UuidGenerator
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false)
@@ -25,7 +21,10 @@ public class Medicamentos {
     private int cantidadEnStock;
 
     @Column(nullable = false)
-    private String laboratoria;
+    private String laboratorio;
+
+    @Column(nullable = false)
+    private int precio;
 
     @Column
     private String urlImagen;
@@ -33,12 +32,13 @@ public class Medicamentos {
     public Medicamentos() {
     }
 
-    public Medicamentos(UUID id, String nombre, String descripcion, int cantidadEnStock, String laboratoria, String urlImagen) {
+    public Medicamentos(UUID id, String nombre, String descripcion, int cantidadEnStock, String laboratorio, int precio, String urlImagen) {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.cantidadEnStock = cantidadEnStock;
-        this.laboratoria = laboratoria;
+        this.laboratorio = laboratorio;
+        this.precio = precio;
         this.urlImagen = urlImagen;
     }
 
@@ -74,12 +74,20 @@ public class Medicamentos {
         this.cantidadEnStock = cantidadEnStock;
     }
 
-    public String getLaboratoria() {
-        return laboratoria;
+    public String getLaboratorio() {
+        return laboratorio;
     }
 
-    public void setLaboratoria(String laboratoria) {
-        this.laboratoria = laboratoria;
+    public void setLaboratorio(String laboratorio) {
+        this.laboratorio = laboratorio;
+    }
+
+    public int getPrecio() {
+        return precio;
+    }
+
+    public void setPrecio(int precio) {
+        this.precio = precio;
     }
 
     public String getUrlImagen() {

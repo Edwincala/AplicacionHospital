@@ -1,5 +1,6 @@
 package com.hospital.proyectoHospital.models;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 import java.util.Date;
@@ -18,6 +19,7 @@ public class HistoriaClinica {
 
     @OneToOne
     @JoinColumn(name = "paciente_id", referencedColumnName = "id")
+    @JsonBackReference
     private Paciente paciente;
 
     public HistoriaClinica() {

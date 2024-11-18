@@ -16,8 +16,8 @@ public class Doctor extends Empleado{
         super();
     }
 
-    public Doctor(UUID id, String nombre, String email, String contrasena, Rol rol, String especialidad) {
-        super(id, nombre, email, contrasena, rol);
+    public Doctor(UUID id, String nombre, String apellido, String email, String contrasena, Rol rol, String especialidad) {
+        super(id, nombre, apellido, email, contrasena, rol);
         this.especialidad = especialidad;
     }
 

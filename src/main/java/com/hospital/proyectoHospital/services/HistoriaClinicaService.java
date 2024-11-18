@@ -30,7 +30,4 @@ public class HistoriaClinicaService {
         historiaClinicaRepository.deleteById(id);
     }
 
-    public List<HistoriaClinica> findHistoriaClinicaByDetalles(String detalles) {
-        return historiaClinicaRepository.findByDetallescontaining(detalles);
-    }
 }
