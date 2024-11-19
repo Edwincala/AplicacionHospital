@@ -91,11 +91,11 @@ public class EmpleadoService {
         }
     }
 
-    public List<Empleado> findEmpleadoByRol(Empleado.Rol rol) {
-        return empleadoRepository.findByRol(rol);
+    public List<Empleado> filtrarPorNombre(String nombreFragment) {
+        return empleadoRepository.findByNombreContainingIgnoreCase(nombreFragment);
     }
 
-    public List<Empleado> findEmpleadoByNombre(String nombre) {
-        return empleadoRepository.findByNombreContainingIgnoreCase(nombre);
+    public List<Empleado> filtrarPorRol(Empleado.Rol rol) {
+        return empleadoRepository.findByRol(rol);
     }
 }

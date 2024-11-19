@@ -67,4 +67,20 @@ public class EmpleadosController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor.");
         }
     }
+
+    @GetMapping("/filtrar/nombre")
+    public ResponseEntity<List<Empleado>> filtrarPorNombre(@RequestParam String nombre) {
+        List<Empleado> empleados = empleadoService.filtrarPorNombre(nombre);
+        return empleados.isEmpty()
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(empleados);
+    }
+
+    @GetMapping("/filtrar/rol")
+    public ResponseEntity<List<Empleado>> filtrarPorRol(@RequestParam Empleado.Rol rol) {
+        List<Empleado> empleados = empleadoService.filtrarPorRol(rol);
+        return empleados.isEmpty()
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(empleados);
+    }
 }

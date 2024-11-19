@@ -63,6 +63,11 @@ public class DoctorController {
         return doctorService.findDoctorByEspecialidad(especialidad);
     }
 
+    @GetMapping("/nombre/{nombre}")
+    public List<Doctor> getDoctorsByNombre(@PathVariable String nombre) {
+        return doctorService.findDoctorByNombre(nombre);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteDoctor(@PathVariable UUID id) {
         try {
