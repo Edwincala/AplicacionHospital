@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
-    List<Doctor> findByEspecialidadContaining(String especialidadFragment);
-    List<Doctor> findByNombreContaining(String nombreFragment);
+    List<Doctor> findByEspecialidadContainingIgnoreCase(String especialidadFragment);
+    List<Doctor> findByNombreContainingIgnoreCase(String nombreFragment);
 }

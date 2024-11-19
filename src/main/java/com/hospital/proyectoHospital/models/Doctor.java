@@ -9,6 +9,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "doctores")
 public class Doctor extends Empleado{
+
     @Column(nullable = false)
     private String especialidad;
 
