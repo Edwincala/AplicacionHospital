@@ -46,6 +46,10 @@ public class Paciente {
     public Paciente() {
     }
 
+    public Paciente(UUID id) {
+        this.id = id;
+    }
+
     public Paciente(UUID id, String nombre, String apellido, String documentoIdentidad, TipoDocumento tipoDocumento, String direccion, String telefono, String email, String contrasena, HistoriaClinica historiaClinica) {
         this.id = id;
         this.nombre = nombre;
