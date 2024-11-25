@@ -1,9 +1,8 @@
 package com.hospital.proyectoHospital.models;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -13,13 +12,21 @@ public class Doctor extends Empleado{
     @Column(nullable = false)
     private String especialidad;
 
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<HorarioDoctor> horarios;
+
     public Doctor() {
         super();
     }
 
-    public Doctor(UUID id, String nombre, String apellido, String email, String contrasena, Rol rol, String especialidad) {
-        super(id, nombre, apellido, email, contrasena, rol);
+    public Doctor(UUID id, String nombre, String apellido, String username, String password, String especialidad, List<HorarioDoctor> horarios, List<Token> tokens) {
+        super(id, nombre, apellido, username, password, Rol.DOCTOR, tokens);
         this.especialidad = especialidad;
+        this.horarios = horarios != null ? horarios : List.of();
+    }
+
+    public Doctor(UUID id, String nombre, String apellido, String email, String password, String especialidad) {
+        this(id, nombre, apellido, email, password, especialidad, null, null);
     }
 
     public String getEspecialidad() {
@@ -28,5 +35,13 @@ public class Doctor extends Empleado{
 
     public void setEspecialidad(String especialidad) {
         this.especialidad = especialidad;
+    }
+
+    public List<HorarioDoctor> getHorarios() {
+        return horarios;
+    }
+
+    public void setHorarios(List<HorarioDoctor> horarios) {
+        this.horarios = horarios;
     }
 }

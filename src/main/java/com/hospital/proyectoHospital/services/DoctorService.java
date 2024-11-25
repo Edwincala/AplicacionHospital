@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class DoctorService {
@@ -54,6 +55,7 @@ public class DoctorService {
 
             if (doctorExistente.isPresent()) {
                 doctorRepository.delete(doctorExistente.get());
+                log.info("Doctor eliminado con éxito: {}", doctorId);
                 return true;
             } else {
                 log.warn("No se encontró un doctor con ID: {}", doctorId);
@@ -65,43 +67,57 @@ public class DoctorService {
         }
     }
 
-    public boolean createOrUpdateDoctor(UUID doctorId, String contrasena, String nombre, String apellido, String email, String especialidad) {
+    public boolean createOrUpdateDoctor(UUID doctorId, String contrasena, String nombre, String apellido, String username, String especialidad) {
         try {
+            if (!isValidUsername(username)) {
+                log.warn("El nombre de usuario no tiene un formato válido: {}", username);
+                return false;
+            }
+
+            if (usernameExists(username, doctorId)) {
+                log.warn("Ya existe un doctor con el nombre de usuario proporcionado: {}", username);
+                return false;
+            }
+
             Doctor doctor;
 
-            // Caso de actualización
             if (doctorId != null) {
-                Optional<Doctor> doctorExistente = doctorRepository.findById(doctorId);
-                if (doctorExistente.isPresent()) {
-                    doctor = doctorExistente.get();
-                } else {
-                    throw new IllegalArgumentException("El ID proporcionado no corresponde a ningún doctor existente.");
-                }
-            }
-            // Caso de creación
-            else {
+                doctor = doctorRepository.findById(doctorId)
+                        .orElseThrow(() -> new IllegalArgumentException("No se encontró un doctor con el ID proporcionado: " + doctorId));
+            } else {
                 doctor = new Doctor();
             }
 
-            // Configurar campos comunes y específicos
+
             doctor.setNombre(nombre);
             doctor.setApellido(apellido);
-            doctor.setEmail(email);
+            doctor.setUsername(username);
             doctor.setEspecialidad(especialidad);
 
-            // Configurar o actualizar la contraseña
             if (contrasena != null && !contrasena.isEmpty()) {
-                doctor.setContrasena(passwordEncoder.encode(contrasena));
+                doctor.setPassword(passwordEncoder.encode(contrasena));
             }
 
-            // Asegurar el rol como DOCTOR
             doctor.setRol(Empleado.Rol.DOCTOR);
 
             doctorRepository.save(doctor);
+            log.info("Doctor {} con éxito: {}", doctorId == null ? "creado" : "actualizado", doctor.getUsername());
             return true;
         } catch (Exception e) {
             log.error("Error al crear o actualizar el doctor: {}", e.getMessage(), e);
             return false;
         }
+    }
+
+    private boolean isValidUsername(String username) {
+        String usernameRegex = "^[a-zA-Z0-9._-]{3,20}$";
+        Pattern pattern = Pattern.compile(usernameRegex);
+        return pattern.matcher(username).matches();
+    }
+
+    private boolean usernameExists(String username, UUID doctorId) {
+        return doctorRepository.findByNombreContainingIgnoreCase(username)
+                .stream()
+                .anyMatch(existingDoctor -> !existingDoctor.getId().equals(doctorId));
     }
 }

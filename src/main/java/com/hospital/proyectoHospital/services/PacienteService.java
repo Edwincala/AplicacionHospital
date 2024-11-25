@@ -3,7 +3,6 @@ package com.hospital.proyectoHospital.services;
 import com.hospital.proyectoHospital.controllers.PacientesController;
 import com.hospital.proyectoHospital.models.HistoriaClinica;
 import com.hospital.proyectoHospital.models.Paciente;
-import com.hospital.proyectoHospital.models.TipoDocumento;
 import com.hospital.proyectoHospital.repositories.PacientesRepository;
 import com.hospital.proyectoHospital.security.PasswordUtils;
 import org.slf4j.Logger;
@@ -33,58 +32,79 @@ public class PacienteService {
     private static final Logger log = LoggerFactory.getLogger(PacientesController.class);
 
     public boolean createOrUpdatePaciente(Paciente paciente) {
-        log.info("Iniciando createOrUpdatePaciente para paciente: {}", paciente);
-
-        if ((paciente.getId() == null || paciente.getContrasena() != null)
-                && !passwordUtils.isPasswordStrong(paciente.getContrasena())) {
-            log.warn("Contraseña débil para el paciente con email: {}", paciente.getEmail());
-            return false;
-        }
-
         try {
-            if (paciente.getId() != null) {
-                Optional<Paciente> pacienteExistente = pacienteRepository.findById(paciente.getId());
-
-                if (pacienteExistente.isPresent()) {
-                    Paciente pacienteActualizado = pacienteExistente.get();
-
-                    // Mantener o actualizar la historia clínica
-                    if (paciente.getHistoriaClinica() != null) {
-                        pacienteActualizado.setHistoriaClinica(paciente.getHistoriaClinica());
-                    } else if (pacienteActualizado.getHistoriaClinica() == null) {
-                        HistoriaClinica nuevaHistoriaClinica = new HistoriaClinica();
-                        nuevaHistoriaClinica.setDetalles("Detalles iniciales de la historia clínica");
-                        nuevaHistoriaClinica.setFechaCreacion(new Date());
-                        nuevaHistoriaClinica.setPaciente(pacienteActualizado);
-                        pacienteActualizado.setHistoriaClinica(nuevaHistoriaClinica);
-                    }
-
-                    // Guardar cambios
-                    pacienteRepository.save(pacienteActualizado);
-                    log.info("Paciente actualizado exitosamente");
-                    return true;
-                } else {
-                    log.warn("No se encontró un paciente con ID: {}", paciente.getId());
-                    return false;
-                }
-            }
-            else {
-                paciente.setContrasena(passwordEncoder.encode(paciente.getContrasena()));
-                pacienteRepository.save(paciente);
-                if (paciente.getHistoriaClinica() == null) {
-                    HistoriaClinica nuevaHistoriaClinica = new HistoriaClinica();
-                    nuevaHistoriaClinica.setDetalles("Detalles iniciales de la historia clínica");
-                    nuevaHistoriaClinica.setFechaCreacion(new Date());
-                    nuevaHistoriaClinica.setPaciente(paciente);
-                    paciente.setHistoriaClinica(nuevaHistoriaClinica);
-                }
-                log.info("Nuevo paciente creado exitosamente");
-                return true;
+            if (paciente.getId() == null) {
+                return createPaciente(paciente);
+            } else {
+                return updatePaciente(paciente);
             }
         } catch (Exception e) {
-            log.error("Error al procesar el paciente: {}", e.getMessage());
+            log.error("Error al procesar el paciente: {}", e.getMessage(), e);
             return false;
         }
+    }
+
+    private boolean createPaciente(Paciente paciente) {
+        log.info("Creando un nuevo paciente: {}", paciente);
+
+        if (!passwordUtils.isPasswordStrong(paciente.getPassword())) {
+            log.warn("Contraseña débil para el paciente con username: {}", paciente.getUsername());
+            return false;
+        }
+
+        paciente.setPassword(passwordEncoder.encode(paciente.getPassword()));
+
+        if (paciente.getHistoriaClinica() == null) {
+            HistoriaClinica nuevaHistoriaClinica = new HistoriaClinica();
+            nuevaHistoriaClinica.setDetalles("Detalles iniciales de la historia clínica");
+            nuevaHistoriaClinica.setFechaCreacion(new Date());
+            nuevaHistoriaClinica.setPaciente(paciente);
+            paciente.setHistoriaClinica(nuevaHistoriaClinica);
+        }
+
+        pacienteRepository.save(paciente);
+        log.info("Paciente creado exitosamente: {}", paciente);
+        return true;
+    }
+
+    private boolean updatePaciente(Paciente paciente) {
+        log.info("Actualizando paciente con ID: {}", paciente.getId());
+
+        Optional<Paciente> pacienteExistente = pacienteRepository.findById(paciente.getId());
+        if (pacienteExistente.isEmpty()) {
+            log.warn("No se encontró un paciente con ID: {}", paciente.getId());
+            return false;
+        }
+
+        Paciente pacienteActualizado = pacienteExistente.get();
+
+
+        pacienteActualizado.setNombre(paciente.getNombre());
+        pacienteActualizado.setApellido(paciente.getApellido());
+        pacienteActualizado.setDireccion(paciente.getDireccion());
+        pacienteActualizado.setTelefono(paciente.getTelefono());
+
+        if (paciente.getPassword() != null && !paciente.getPassword().isEmpty()) {
+            if (!passwordUtils.isPasswordStrong(paciente.getPassword())) {
+                log.warn("Contraseña débil para el paciente con username: {}", paciente.getUsername());
+                return false;
+            }
+            pacienteActualizado.setPassword(passwordEncoder.encode(paciente.getPassword()));
+        }
+
+        if (paciente.getHistoriaClinica() != null) {
+            pacienteActualizado.setHistoriaClinica(paciente.getHistoriaClinica());
+        } else if (pacienteActualizado.getHistoriaClinica() == null) {
+            HistoriaClinica nuevaHistoriaClinica = new HistoriaClinica();
+            nuevaHistoriaClinica.setDetalles("Detalles iniciales de la historia clínica");
+            nuevaHistoriaClinica.setFechaCreacion(new Date());
+            nuevaHistoriaClinica.setPaciente(pacienteActualizado);
+            pacienteActualizado.setHistoriaClinica(nuevaHistoriaClinica);
+        }
+
+        pacienteRepository.save(pacienteActualizado);
+        log.info("Paciente actualizado exitosamente: {}", pacienteActualizado);
+        return true;
     }
 
     public List<Paciente> findAllPacientes() {
@@ -97,18 +117,11 @@ public class PacienteService {
     }
 
     public void deletePaciente(UUID id) {
-        pacienteRepository.deleteById(id);
-    }
-
-    public List<Paciente> findPacientesByNombre(String nombre) {
-        return pacienteRepository.findByNombreContaining(nombre);
-    }
-
-    public List<Paciente> findPacientesByApellido(String apellidoFragment) {
-        return pacienteRepository.findByApellidoContaining(apellidoFragment);
-    }
-
-    public List<Paciente> findPacientesByDocumentoIdentidad(String documentoPrefix) {
-        return pacienteRepository.findByDocumentoIdentidadStartingWith(documentoPrefix);
+        if (pacienteRepository.existsById(id)) {
+            pacienteRepository.deleteById(id);
+            log.info("Paciente con ID {} eliminado exitosamente.", id);
+        } else {
+            log.warn("No se encontró un paciente con ID: {}", id);
+        }
     }
 }

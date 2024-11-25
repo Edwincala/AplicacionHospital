@@ -28,7 +28,7 @@ public class MedicamentosService {
             log.info("Medicamento procesado correctamente: {}", medicamentos);
             return true;
         } catch (Exception e) {
-            log.error("Error al procesar el medicamento: {}", e.getMessage());
+            log.error("Error al procesar el medicamento: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -42,10 +42,12 @@ public class MedicamentosService {
     }
 
     public Page<Medicamentos> findMedicamentosByNombre(String nombre, Pageable pageable) {
+        log.info("Buscando medicamentos por nombre: {}", nombre);
         return medicamentosRepository.findByNombreContainingIgnoreCase(nombre, pageable);
     }
 
     public Page<Medicamentos> findMedicamentosByLaboratorio(String laboratorio, Pageable pageable) {
+        log.info("Buscando medicamentos del laboratorio: {}", laboratorio);
         return medicamentosRepository.findByLaboratorioIgnoreCase(laboratorio, pageable);
     }
 
@@ -64,7 +66,19 @@ public class MedicamentosService {
         return medicamentosRepository.findByLaboratorioOrderByPrecioDesc(laboratorio);
     }
 
-    public void deleteMedicamentos(UUID id) {
-        medicamentosRepository.deleteById(id);
+    public boolean deleteMedicamentos(UUID id) {
+        try {
+            if (medicamentosRepository.existsById(id)) {
+                medicamentosRepository.deleteById(id);
+                log.info("Medicamento con ID {} eliminado correctamente.", id);
+                return true;
+            } else {
+                log.warn("No se encontró un medicamento con ID: {}", id);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("Error al eliminar el medicamento con ID {}: {}", id, e.getMessage(), e);
+            return false;
+        }
     }
 }

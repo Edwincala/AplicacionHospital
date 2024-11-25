@@ -19,9 +19,13 @@ import java.util.UUID;
 public class CitaController {
 
     @Autowired
-    private CitaService citaService;
+    private final CitaService citaService;
 
     private static final Logger log = LoggerFactory.getLogger(PacientesController.class);
+
+    public CitaController(CitaService citaService) {
+        this.citaService = citaService;
+    }
 
     @PostMapping("/agendar")
     public ResponseEntity<String> agendarCita(
@@ -45,17 +49,30 @@ public class CitaController {
 
     @GetMapping("/paciente/{pacienteId}")
     public ResponseEntity<List<Cita>> obtenerCitasPorPaciente(@PathVariable UUID pacienteId) {
-        List<Cita> citas = citaService.obtenerCitasPorPaciente(pacienteId);
-        return ResponseEntity.ok(citas);
+        try {
+            List<Cita> citas = citaService.obtenerCitasPorPaciente(pacienteId);
+            if (citas.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+            }
+            return ResponseEntity.ok(citas);
+        } catch (Exception e) {
+            log.error("Error al obtener las citas para el paciente {}: {}", pacienteId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @DeleteMapping("/cancelar/{citaId}")
     public ResponseEntity<String> cancelarCita(@PathVariable UUID citaId) {
-        boolean result = citaService.cancelarCita(citaId);
-        if (result) {
-            return ResponseEntity.ok("Cita cancelada exitosamente.");
-        } else {
-            return ResponseEntity.badRequest().body("No se pudo cancelarla cita");
+        try {
+            boolean result = citaService.cancelarCita(citaId);
+            if (result) {
+                return ResponseEntity.ok("Cita cancelada exitosamente.");
+            } else {
+                return ResponseEntity.badRequest().body("No se pudo cancelar la cita. Verifica si existe o su estado actual.");
+            }
+        } catch (Exception e) {
+            log.error("Error al cancelar la cita: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ocurrió un error interno. Inténtalo nuevamente.");
         }
     }
 }

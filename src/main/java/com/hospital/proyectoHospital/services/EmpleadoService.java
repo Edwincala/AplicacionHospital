@@ -1,7 +1,6 @@
 package com.hospital.proyectoHospital.services;
 
 import com.hospital.proyectoHospital.controllers.PacientesController;
-import com.hospital.proyectoHospital.models.Doctor;
 import com.hospital.proyectoHospital.models.Empleado;
 import com.hospital.proyectoHospital.repositories.EmpleadoRepository;
 import com.hospital.proyectoHospital.security.PasswordUtils;
@@ -14,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class EmpleadoService {
@@ -36,39 +36,49 @@ public class EmpleadoService {
         return empleadoRepository.findById(id);
     }
 
-    public boolean createOrUpdateEmpleado(UUID empleadoId, String contrasena, String nombre, String apellido, String email, Empleado.Rol rol) {
+    public boolean createOrUpdateEmpleado(UUID empleadoId, String contrasena, String nombre, String apellido, String username, Empleado.Rol rol) {
         try {
+            if (!isValidUsername(username)) {
+                log.warn("El nombre de usuario no tiene un formato válido: {}", username);
+                return false;
+            }
+
+            if (usernameExists(username, empleadoId)) {
+                log.warn("Ya existe un empleado con el nombre de usuario proporcionado: {}", username);
+                return false;
+            }
+
             Empleado empleado;
 
+            // Caso de actualización
             if (empleadoId != null) {
-                Optional<Empleado> empleadoExistente = empleadoRepository.findById(empleadoId);
-                if (empleadoExistente.isPresent()) {
-                    empleado = empleadoExistente.get();
-                } else {
-                    throw new IllegalArgumentException("No se encontró un empleado con el ID proporcionado.");
-                }
+                empleado = empleadoRepository.findById(empleadoId)
+                        .orElseThrow(() -> new IllegalArgumentException("No se encontró un empleado con el ID proporcionado."));
             } else {
+                // Caso de creación
                 empleado = new Empleado();
             }
 
-            if (contrasena != null && !contrasena.isEmpty()) {
-                if (!passwordUtils.isPasswordStrong(contrasena)) {
-                    log.warn("Contraseña débil para el empleado con email: {}", email);
-                    return false;
-                }
-                empleado.setContrasena(passwordEncoder.encode(contrasena));
-            }
-
+            // Configurar campos comunes
             empleado.setNombre(nombre);
             empleado.setApellido(apellido);
-            empleado.setEmail(email);
+            empleado.setUsername(username);
             empleado.setRol(rol);
 
+            // Configurar o actualizar la contraseña
+            if (contrasena != null && !contrasena.isEmpty()) {
+                if (!isPasswordStrong(contrasena)) {
+                    log.warn("Contraseña débil para el empleado con username: {}", username);
+                    return false;
+                }
+                empleado.setPassword(passwordEncoder.encode(contrasena));
+            }
+
             empleadoRepository.save(empleado);
-            log.info("Empleado {} guardado exitosamente.", empleado.getNombre());
+            log.info("Empleado {} guardado exitosamente.", empleado.getUsername());
             return true;
         } catch (Exception e) {
-            log.error("Error al crear o actualizar empleado: {}", e.getMessage());
+            log.error("Error al crear o actualizar empleado: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -78,8 +88,8 @@ public class EmpleadoService {
             Optional<Empleado> empleadoExistente = empleadoRepository.findById(empleadoId);
 
             if (empleadoExistente.isPresent()) {
-                Empleado empleado = empleadoExistente.get();
-                empleadoRepository.delete(empleado);
+                empleadoRepository.delete(empleadoExistente.get());
+                log.info("Empleado eliminado con éxito: {}", empleadoId);
                 return true;
             } else {
                 log.warn("No se encontró un empleado con ID: {}", empleadoId);
@@ -98,4 +108,23 @@ public class EmpleadoService {
     public List<Empleado> filtrarPorRol(Empleado.Rol rol) {
         return empleadoRepository.findByRol(rol);
     }
+
+    private boolean usernameExists(String username, UUID empleadoId) {
+        return empleadoRepository.findByNombreContainingIgnoreCase(username)
+                .stream()
+                .anyMatch(existingEmpleado -> !existingEmpleado.getId().equals(empleadoId));
+    }
+
+    private boolean isValidUsername(String username) {
+        String usernameRegex = "^[a-zA-Z0-9._-]{3,20}$";
+        Pattern pattern = Pattern.compile(usernameRegex);
+        return pattern.matcher(username).matches();
+    }
+
+    private boolean isPasswordStrong(String password) {
+        String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
+        Pattern pattern = Pattern.compile(passwordRegex);
+        return pattern.matcher(password).matches();
+    }
+
 }

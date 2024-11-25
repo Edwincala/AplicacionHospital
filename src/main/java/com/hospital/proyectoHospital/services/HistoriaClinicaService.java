@@ -27,7 +27,7 @@ public class HistoriaClinicaService {
     public Optional<HistoriaClinica> findHistoriaClinica(UUID usuarioId, Empleado.Rol rol, UUID pacienteId) {
         if (rol == Empleado.Rol.DOCTOR) {
             return historiaClinicaRepository.findByPacienteId(pacienteId);
-        } else if (rol == null) {
+        } else if (rol == Empleado.Rol.PACIENTE) {
             if (usuarioId.equals(pacienteId)) {
                 return historiaClinicaRepository.findByPacienteId(pacienteId);
             }
@@ -35,8 +35,17 @@ public class HistoriaClinicaService {
         return Optional.empty();
     }
 
-    public void deleteHistoriaClinica(Long id) {
-        historiaClinicaRepository.deleteById(id);
+    public boolean deleteHistoriaClinica(Long id) {
+        try {
+            if (historiaClinicaRepository.existsById(id)) {
+                historiaClinicaRepository.deleteById(id);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            // Logging del error (si se necesita)
+            return false;
+        }
     }
 
 }
