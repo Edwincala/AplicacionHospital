@@ -48,4 +48,21 @@ public class HistoriaClinicaService {
         }
     }
 
+    public Optional<HistoriaClinica> findById(Long id, UUID usuarioId, Empleado.Rol rol) {
+        Optional<HistoriaClinica> historiaOpt = historiaClinicaRepository.findById(id);
+
+        if (historiaOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        HistoriaClinica historia = historiaOpt.get();
+        UUID pacienteId = historia.getPaciente().getId();
+
+        // Usar la lógica existente de verificación de permisos
+        Optional<HistoriaClinica> historiaConPermisos = findHistoriaClinica(usuarioId, rol, pacienteId);
+
+        // Si findHistoriaClinica retorna un valor, significa que el usuario tiene permisos
+        return historiaConPermisos.isPresent() ? historiaOpt : Optional.empty();
+    }
+
 }

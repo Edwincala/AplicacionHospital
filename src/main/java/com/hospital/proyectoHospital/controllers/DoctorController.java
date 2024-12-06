@@ -1,6 +1,9 @@
 package com.hospital.proyectoHospital.controllers;
 
 import com.hospital.proyectoHospital.models.Doctor;
+import com.hospital.proyectoHospital.models.Usuario;
+import com.hospital.proyectoHospital.repositories.DoctorRepository;
+import com.hospital.proyectoHospital.repositories.UsuarioRepository;
 import com.hospital.proyectoHospital.services.DoctorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,8 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
+import javax.print.Doc;
+import java.util.*;
 
 @RestController
 @RequestMapping("/doctores")
@@ -19,10 +22,18 @@ public class DoctorController {
     @Autowired
     private final DoctorService doctorService;
 
+    @Autowired
+    private final DoctorRepository doctorRepository;
+
+    @Autowired
+    private final UsuarioRepository usuarioRepository;
+
     private static final Logger log = LoggerFactory.getLogger(PacientesController.class);
 
-    public DoctorController(DoctorService doctorService) {
+    public DoctorController(DoctorService doctorService, DoctorRepository doctorRepository, UsuarioRepository usuarioRepository) {
         this.doctorService = doctorService;
+        this.doctorRepository = doctorRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @PostMapping
@@ -107,6 +118,7 @@ public class DoctorController {
         }
     }
 
+
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteDoctor(@PathVariable UUID id) {
         try {
@@ -120,5 +132,34 @@ public class DoctorController {
             log.error("Error al eliminar el doctor con ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor.");
         }
+    }
+
+    @GetMapping("/perfil/{username}")
+    public ResponseEntity<Map<String, Object>> obtenerPerfilDoctor(@PathVariable String username) {
+        try {
+            Optional<Usuario> usuarioOpt = usuarioRepository.findByUsername(username);
+            if (usuarioOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Usuario usuario = usuarioOpt.get();
+            Optional<Doctor> doctorOpt = doctorRepository.findByUsername(usuario);
+            if (doctorOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Doctor doctor = doctorOpt.get();
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", doctor.getId());
+            response.put("nombre", doctor.getNombre());
+            response.put("apellido", doctor.getApellido());
+            response.put("especialidad", doctor.getEspecialidad());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error al obtener perfil del doctor {}: {}", username, e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+
     }
 }

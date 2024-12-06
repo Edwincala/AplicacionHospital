@@ -89,7 +89,6 @@ public class UsuarioService {
     public Usuario createUserFromPerfilDto(PerfilDto perfilDto) {
         Usuario usuario;
 
-        // Crear instancia según el rol
         switch (perfilDto.getRole()) {
             case PACIENTE:
                 usuario = new Paciente();
@@ -108,12 +107,10 @@ public class UsuarioService {
                 break;
         }
 
-        // Establecer atributos comunes
         usuario.setNombre(perfilDto.getNombre());
         usuario.setApellido(perfilDto.getApellido());
         usuario.setUsername(perfilDto.getUsername());
 
-        // Generar y encriptar contraseña
         String generatedPassword = generatePassword(perfilDto.getNombre());
         usuario.setPassword(passwordEncoder.encode(generatedPassword));
 

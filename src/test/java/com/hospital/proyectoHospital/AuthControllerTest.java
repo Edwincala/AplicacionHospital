@@ -164,6 +164,4 @@ public class AuthControllerTest {
                         .principal(authentication))
                 .andExpect(status().isNotFound());
     }
-
-
 }
