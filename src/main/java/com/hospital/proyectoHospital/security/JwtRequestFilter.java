@@ -1,16 +1,25 @@
 package com.hospital.proyectoHospital.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hospital.proyectoHospital.controllers.PacientesController;
+import com.hospital.proyectoHospital.controllers.TokenResponse;
 import com.hospital.proyectoHospital.models.Token;
 import com.hospital.proyectoHospital.models.Usuario;
 import com.hospital.proyectoHospital.repositories.TokenRepository;
-import com.hospital.proyectoHospital.repositories.UsuarioRepository;
+import com.hospital.proyectoHospital.services.AuthService;
 import com.hospital.proyectoHospital.services.JwtService;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,7 +29,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Optional;
+
+import java.util.Map;
 
 @Component
 public class JwtRequestFilter extends OncePerRequestFilter {
@@ -28,73 +38,96 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final TokenRepository tokenRepository;
     private final UserDetailsService userDetailsService;
-    private final UsuarioRepository usuarioRepository;
+    private final AuthenticationManager authenticationManager;
+    private final AuthService authService;
 
-    public JwtRequestFilter(JwtService jwtService, TokenRepository tokenRepository, UserDetailsService userDetailsService, UsuarioRepository usuarioRepository) {
+    private static final Logger log = LoggerFactory.getLogger(PacientesController.class);
+
+    public JwtRequestFilter(JwtService jwtService, TokenRepository tokenRepository, @Lazy UserDetailsService userDetailsService, @Lazy AuthenticationManager authenticationManager, @Lazy AuthService authService) {
         this.jwtService = jwtService;
         this.tokenRepository = tokenRepository;
         this.userDetailsService = userDetailsService;
-        this.usuarioRepository = usuarioRepository;
+        this.authenticationManager = authenticationManager;
+        this.authService = authService;
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain chain)
-            throws ServletException, IOException {
-        // Saltar rutas públicas
-        if (request.getServletPath().contains("/public")) {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain chain) throws ServletException, IOException {
+        if (shouldNotFilter(request)) {
             chain.doFilter(request, response);
             return;
         }
 
-        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String refreshToken = request.getHeader("Refresh-Token");
 
-        // Verificar si el encabezado de autorización es válido
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             chain.doFilter(request, response);
             return;
         }
 
-        final String jwtToken = authHeader.substring(7);
-
         try {
-            final String username = jwtService.extractUsername(jwtToken);
+            String jwt = authHeader.substring(7);
+            String username = jwtService.extractUsername(jwt);
 
-            // Validar que el usuario no esté autenticado previamente
-            if (username == null || SecurityContextHolder.getContext().getAuthentication() != null) {
-                chain.doFilter(request, response);
-                return;
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                Token token = tokenRepository.findByToken(jwt).orElse(null);
+
+                if (token != null && !token.isExpired() && !token.isRevoked() &&
+                        jwtService.isTokenValid(jwt, (Usuario) userDetails)) {
+                    setAuthentication(userDetails, request);
+                } else if (refreshToken != null) {
+                    handleTokenRefresh(refreshToken, response);
+                }
             }
-
-            // Validar el token en la base de datos
-            final Token token = tokenRepository.findByToken(jwtToken).orElse(null);
-            if (token == null || token.isExpired() || token.isRevoked()) {
-                chain.doFilter(request, response);
-                return;
+        } catch (ExpiredJwtException e) {
+            if (refreshToken != null) {
+                handleTokenRefresh(refreshToken, response);
+            } else {
+                sendErrorResponse(response, "Token expired");
             }
-
-            // Cargar los detalles del usuario
-            final UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            final Optional<Usuario> usuario = usuarioRepository.findByUsername(username);
-
-            if (usuario.isEmpty() || !jwtService.isTokenValid(jwtToken, usuario.get())) {
-                chain.doFilter(request, response);
-                return;
-            }
-
-            // Configurar el contexto de seguridad
-            var authToken = new UsernamePasswordAuthenticationToken(
-                    userDetails,
-                    null,
-                    userDetails.getAuthorities()
-            );
-            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authToken);
+            return;
         } catch (Exception e) {
-            // Manejar cualquier excepción y continuar con el filtro
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            sendErrorResponse(response, "Invalid token");
             return;
         }
 
         chain.doFilter(request, response);
+    }
+
+    private void handleTokenRefresh(String refreshToken, HttpServletResponse response) throws IOException {
+        try {
+            TokenResponse newTokens = authService.refreshToken(refreshToken);
+            response.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + newTokens.accessToken());
+            response.setHeader("Refresh-Token", newTokens.refreshToken());
+            log.info("Tokens renovados y enviados en la respuesta.");
+        } catch (Exception e) {
+            log.error("Error al manejar el refresh token: {}", e.getMessage());
+            sendErrorResponse(response, "Invalid refresh token. Please reauthenticate.");
+        }
+    }
+
+    private void setAuthentication(UserDetails userDetails, HttpServletRequest request) {
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities()
+        );
+        auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    private void sendErrorResponse(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write(new ObjectMapper().writeValueAsString(
+                Map.of("error", message)
+        ));
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "OPTIONS".equalsIgnoreCase(request.getMethod());
     }
 }

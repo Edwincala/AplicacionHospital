@@ -2,6 +2,8 @@ package com.hospital.proyectoHospital.services;
 
 import com.hospital.proyectoHospital.models.*;
 import com.hospital.proyectoHospital.repositories.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -26,6 +28,8 @@ public class CitaService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    private static final Logger log = LoggerFactory.getLogger(CitaService.class);
 
 
     public boolean agendarCita(UUID usuarioId, UUID pacienteId, UUID doctorId, LocalDateTime fechaHora) {
@@ -62,6 +66,26 @@ public class CitaService {
         }
 
         return false;
+    }
+
+    public List<Cita> obtenerCitasPorDoctor(Doctor doctor) {
+        return citaRepository.findByDoctorOrderByFechaHoraDesc(doctor);
+    }
+
+    public Optional<Cita> obtenerCitaPorId(UUID id) {
+        return citaRepository.findById(id);
+    }
+
+    public Cita completarCita(Cita cita, String observaciones) {
+        if (!cita.getEstado().equals(Cita.EstadoCita.CONFIRMADA)) {
+            throw new IllegalStateException("Solo se pueden completar citas confirmadas");
+        }
+
+        cita.setEstado(Cita.EstadoCita.COMPLETADA);
+        cita.setObservaciones(observaciones);
+        cita.setFechaCompletada(LocalDateTime.now());
+
+        return citaRepository.save(cita);
     }
 
     public List<Cita> obtenerCitasPorPaciente(UUID pacienteId) {

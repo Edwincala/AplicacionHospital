@@ -25,6 +25,9 @@ public class Cita {
     @Column(nullable = false)
     private LocalDateTime fechaHora;
 
+    @Column(name = "fecha_completada")
+    private LocalDateTime fechaCompletada;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EstadoCita estado;
@@ -36,15 +39,20 @@ public class Cita {
         COMPLETADA
     }
 
+    @Column(columnDefinition = "TEXT")
+    private String observaciones;
+
     public Cita() {
     }
 
-    public Cita(UUID id, Paciente paciente, Doctor doctor, LocalDateTime fechaHora, EstadoCita estado) {
+    public Cita(UUID id, Paciente paciente, Doctor doctor, LocalDateTime fechaHora, EstadoCita estado, LocalDateTime fechaCompletada, String observaciones) {
         this.id = id;
         this.paciente = paciente;
         this.doctor = doctor;
         this.fechaHora = fechaHora;
         this.estado = estado;
+        this.fechaCompletada = fechaCompletada;
+        this.observaciones = observaciones;
     }
 
     public UUID getId() {
@@ -85,5 +93,21 @@ public class Cita {
 
     public void setEstado(EstadoCita estado) {
         this.estado = estado;
+    }
+
+    public LocalDateTime getFechaCompletada() {
+        return fechaCompletada;
+    }
+
+    public void setFechaCompletada(LocalDateTime fechaCompletada) {
+        this.fechaCompletada = fechaCompletada;
+    }
+
+    public String getObservaciones() {
+        return observaciones;
+    }
+
+    public void setObservaciones(String observaciones) {
+        this.observaciones = observaciones;
     }
 }

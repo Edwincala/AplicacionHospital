@@ -1,7 +1,6 @@
 package com.hospital.proyectoHospital.controllers;
 
 import com.hospital.proyectoHospital.models.Paciente;
-import com.hospital.proyectoHospital.models.TipoDocumento;
 import com.hospital.proyectoHospital.services.PacienteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,22 +24,19 @@ public class PacientesController {
 
     @PostMapping
     public ResponseEntity<String> createOrUpdatePaciente(@RequestBody Paciente paciente) {
-        log.info("Solicitud para procesar paciente: {}", paciente);
+        log.info("Procesando paciente: {}", paciente);
 
-        try {
-            boolean result = pacienteService.createOrUpdatePaciente(paciente);
-
-            if (result) {
-                String mensaje = (paciente.getId() != null) ?
-                        "Paciente actualizado con éxito." :
-                        "Paciente creado con éxito.";
-                return ResponseEntity.ok(mensaje);
+        if (paciente.getId() == null) {
+            // Crear nuevo paciente
+            pacienteService.createOrUpdatePaciente(paciente);
+            return ResponseEntity.ok("Paciente creado con éxito.");
+        } else {
+            boolean actualizado = pacienteService.createOrUpdatePaciente(paciente);
+            if (actualizado) {
+                return ResponseEntity.ok("Paciente actualizado con éxito.");
             } else {
-                return ResponseEntity.badRequest().body("No se pudo procesar la solicitud. Verifica los datos proporcionados.");
+                return ResponseEntity.badRequest().body("No se encontró el paciente para actualizar.");
             }
-        } catch (Exception e) {
-            log.error("Error al procesar paciente: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor.");
         }
     }
 

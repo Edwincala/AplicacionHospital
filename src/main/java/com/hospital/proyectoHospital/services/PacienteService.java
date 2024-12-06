@@ -3,6 +3,7 @@ package com.hospital.proyectoHospital.services;
 import com.hospital.proyectoHospital.controllers.PacientesController;
 import com.hospital.proyectoHospital.models.HistoriaClinica;
 import com.hospital.proyectoHospital.models.Paciente;
+import com.hospital.proyectoHospital.models.Usuario;
 import com.hospital.proyectoHospital.repositories.PacientesRepository;
 import com.hospital.proyectoHospital.security.PasswordUtils;
 import org.slf4j.Logger;
@@ -44,12 +45,17 @@ public class PacienteService {
         }
     }
 
-    private boolean createPaciente(Paciente paciente) {
+    @Transactional
+    public boolean createPaciente(Paciente paciente) {
         log.info("Creando un nuevo paciente: {}", paciente);
+
+        if (paciente.getRol() == null) {
+            paciente.setRol(Usuario.Rol.valueOf("PACIENTE"));
+        }
 
         if (!passwordUtils.isPasswordStrong(paciente.getPassword())) {
             log.warn("Contraseña débil para el paciente con username: {}", paciente.getUsername());
-            return false;
+            throw new IllegalArgumentException("La contraseña proporcionada no es lo suficientemente fuerte.");
         }
 
         paciente.setPassword(passwordEncoder.encode(paciente.getPassword()));

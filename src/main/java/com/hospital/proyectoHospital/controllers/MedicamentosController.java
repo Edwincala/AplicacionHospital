@@ -52,7 +52,7 @@ public class MedicamentosController {
     public ResponseEntity<List<Medicamentos>> getAllMedicamentos() {
         try {
             List<Medicamentos> medicamentos = medicamentosService.findAllMedicamentos();
-            return medicamentos.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(medicamentos);
+            return ResponseEntity.ok(medicamentos); // Siempre retorna OK con la lista (vacía o no)
         } catch (Exception e) {
             log.error("Error al obtener medicamentos: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
